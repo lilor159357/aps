@@ -1,20 +1,20 @@
 name: Download APK from APKCube
 
 on:
-  workflow_dispatch: # מאפשר לך להפעיל את הסקריפט ידנית בלחיצת כפתור
+  workflow_dispatch: 
 
 jobs:
   download-job:
-    runs-on: ubuntu-latest # השרת של גיטהאב (לינוקס)
+    runs-on: ubuntu-latest 
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4 # שונה מ-v3 ל-v4
 
     - name: Setup Node.js
-      uses: actions/setup-node@v3
+      uses: actions/setup-node@v4 # שונה מ-v3 ל-v4
       with:
-        node-version: '18'
+        node-version: '20' # עדכנתי לגרסת נוד עדכנית יותר
 
     - name: Install dependencies
       run: |
@@ -23,10 +23,10 @@ jobs:
         npx playwright install chromium
 
     - name: Run Downloader Script
-      run: node scraper.js # כאן השרת מריץ את הקוד שלך
+      run: node scraper.js 
 
     - name: Upload APK as Artifact
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4 # שונה מ-v3 ל-v4 שזה מה שגרם לשגיאה
       with:
-        name: Whatsapp-APK
-        path: ./*.apk # מעלה את הקובץ שירד כדי שתוכל להוריד אותו מהאתר של גיטהאב
+        name: Downloaded-APK
+        path: ./*.apk

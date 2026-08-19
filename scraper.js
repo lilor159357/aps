@@ -7,7 +7,6 @@ chromium.use(stealth);
   const browser = await chromium.launch({ headless: true });
   const context = await browser.newContext({
     viewport: { width: 1920, height: 1080 },
-    // הוספנו קצת יותר הגדרות כדי להיראות כמו דפדפן אנושי ולנסות להערים על Cloudflare
     userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
     locale: 'he-IL,he;q=0.9,en-US;q=0.8,en;q=0.7',
     timezoneId: 'Asia/Jerusalem',
@@ -27,39 +26,45 @@ chromium.use(stealth);
     const downloadBtn = page.locator('button:has-text("Download APKS")').first();
     await downloadBtn.waitFor({ state: 'visible', timeout: 15000 });
 
-    console.log("Clicking the download button...");
-    
-    // הפעם אנחנו קודם לוחצים, ואז מטפלים בקאפצ'ה
-    await downloadBtn.click();
-
-    // אנחנו מגדירים לסקריפט לחכות לאירוע הורדה ברקע
+    // מכינים את ההאזנה להורדה
     const downloadPromise = page.waitForEvent('download', { timeout: 80000 });
 
-    console.log("Checking for Cloudflare Turnstile challenge...");
-    try {
-      // אנחנו מחפשים את החלונית הקטנה של קלאודפלייר לפי הכתובת שלה
-      const cfIframe = page.frameLocator('iframe[src*="challenges.cloudflare.com"]').first();
-      
-      // מחכים שהיא תופיע על המסך (נותנים לה 10 שניות)
-      const checkbox = cfIframe.locator('body');
-      await checkbox.waitFor({ state: 'visible', timeout: 10000 });
+    console.log("Clicking the download button...");
+    await downloadBtn.click();
 
-      console.log("Cloudflare challenge found! Attempting to click the checkbox...");
+    // --- שלב הטיפול החדש בקאפצ'ה לפי ה-HTML שמצאת ---
+    try {
+      console.log("Looking for the cf-turnstile container...");
       
-      // מחכים קצת כדי לדמות התנהגות אנושית
-      await page.waitForTimeout(1500);
+      // 1. מחכים שהקופסה של הקאפצ'ה (שמצאת בקוד) תופיע
+      const turnstileContainer = page.locator('#cf-turnstile');
+      await turnstileContainer.waitFor({ state: 'visible', timeout: 10000 });
       
-      // לוחצים עליה
-      await checkbox.click({ delay: 100 });
-      console.log("Clicked the CAPTCHA. Waiting for it to verify...");
+      console.log("Turnstile container found! Targeting the iframe inside it...");
+      
+      // 2. תופסים את המסגרת של Cloudflare שנוצרת *בתוך* הקופסה הזו
+      const cfIframe = page.frameLocator('#cf-turnstile iframe').first();
+      const widgetBody = cfIframe.locator('body');
+      
+      // 3. מוודאים שהיא נטענה
+      await widgetBody.waitFor({ state: 'visible', timeout: 10000 });
+      
+      // 4. השהייה אנושית לפני לחיצה
+      await page.waitForTimeout(2000);
+      
+      console.log("Clicking inside the Turnstile widget...");
+      // לוחצים במרכז המסגרת (איפה שהריבוע של ה-V נמצא)
+      await widgetBody.click({ delay: 150, force: true });
+      console.log("Clicked! Waiting for Cloudflare to verify...");
 
     } catch (e) {
-      console.log("No interactive CAPTCHA appeared, or it passed automatically.");
+      console.log("CAPTCHA didn't load properly, or wasn't needed. Error info:", e.message);
     }
+    // ------------------------------------------------
 
-    console.log("Waiting for the download to start...");
+    console.log("Waiting for the download to start (up to 80 seconds)...");
     
-    // עכשיו מחכים שההורדה תתחיל בפועל (אחרי שקלאודפלייר אישר אותנו)
+    // ממתינים שההורדה תתחיל בפועל
     const download = await downloadPromise;
 
     console.log("Download event triggered!");

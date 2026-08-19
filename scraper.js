@@ -11,19 +11,22 @@ chromium.use(stealth);
   });
   const page = await context.newPage();
 
-  const url = 'https://apkcube.com/egg-bus-train-in-israel/com.egged.egg/download';
-  console.log(`Navigating to: ${url}`);
-  
-  await page.goto(url, { waitUntil: 'networkidle' });
-
-  console.log("Looking for the download button...");
-  // חיפוש מדויק יותר של הכפתור לפי הטקסט המלא
-  const downloadBtn = page.locator('button:has-text("Download APKS")').first();
-  await downloadBtn.waitFor({ state: 'visible' });
-
-  console.log("Clicking the button...");
-  
   try {
+    const url = 'https://apkcube.com/egg-bus-train-in-israel/com.egged.egg/download';
+    console.log(`Navigating to: ${url}`);
+    
+    // שינינו ל-domcontentloaded והגדלנו את זמן הטעינה ל-60 שניות למקרה שהשרת איטי
+    await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 60000 });
+
+    console.log("Waiting 5 seconds to let Cloudflare and Ads load...");
+    await page.waitForTimeout(5000); // נותנים לדף 5 שניות "להירגע"
+
+    console.log("Looking for the download button...");
+    const downloadBtn = page.locator('button:has-text("Download APKS")').first();
+    await downloadBtn.waitFor({ state: 'visible', timeout: 15000 });
+
+    console.log("Clicking the button...");
+    
     const [download] = await Promise.all([
       page.waitForEvent('download', { timeout: 70000 }),
       downloadBtn.click()
@@ -36,12 +39,12 @@ chromium.use(stealth);
     console.log("Download completed successfully!");
 
   } catch (error) {
-    console.error("Failed to download. Taking a screenshot to see what went wrong...");
-    // כאן אנחנו מצלמים את המסך
+    console.error("An error occurred. Taking a screenshot...");
+    // עכשיו צילום המסך יעבוד גם אם הטעינה נכשלת!
     await page.screenshot({ path: 'error-screenshot.png', fullPage: true });
     console.error(error.message);
-    process.exit(1); // יציאה עם שגיאה כדי שגיטהאב יידע שזה נכשל
+    process.exit(1); 
+  } finally {
+    await browser.close();
   }
-
-  await browser.close();
 })();

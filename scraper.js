@@ -26,45 +26,54 @@ chromium.use(stealth);
     const downloadBtn = page.locator('button:has-text("Download APKS")').first();
     await downloadBtn.waitFor({ state: 'visible', timeout: 15000 });
 
-    // מכינים את ההאזנה להורדה
     const downloadPromise = page.waitForEvent('download', { timeout: 80000 });
 
     console.log("Clicking the download button...");
     await downloadBtn.click();
 
-    // --- שלב הטיפול החדש בקאפצ'ה לפי ה-HTML שמצאת ---
+    // --- שלב הטיפול בקאפצ'ה ---
     try {
       console.log("Looking for the cf-turnstile container...");
-      
-      // 1. מחכים שהקופסה של הקאפצ'ה (שמצאת בקוד) תופיע
       const turnstileContainer = page.locator('#cf-turnstile');
-      await turnstileContainer.waitFor({ state: 'visible', timeout: 10000 });
+      await turnstileContainer.waitFor({ state: 'visible', timeout: 15000 });
       
-      console.log("Turnstile container found! Targeting the iframe inside it...");
+      // מחכים 3 שניות כדי לתת לקלאודפלייר זמן להזריק את הקוד שלו פנימה
+      await page.waitForTimeout(3000);
+
+      // הרעיון שלך: מדפיסים את ה-HTML של הקאפצ'ה
+      console.log("Turnstile container found! Printing its HTML for debugging:");
+      const containerHtml = await turnstileContainer.innerHTML();
+      console.log("================ HTML START ================");
+      console.log(containerHtml);
+      console.log("================ HTML END ================");
+
+      // לחיצה מבוססת קואורדינטות במקום לחפש אלמנטים
+      console.log("Calculating coordinates to perform a physical mouse click...");
+      const box = await turnstileContainer.boundingBox();
       
-      // 2. תופסים את המסגרת של Cloudflare שנוצרת *בתוך* הקופסה הזו
-      const cfIframe = page.frameLocator('#cf-turnstile iframe').first();
-      const widgetBody = cfIframe.locator('body');
-      
-      // 3. מוודאים שהיא נטענה
-      await widgetBody.waitFor({ state: 'visible', timeout: 10000 });
-      
-      // 4. השהייה אנושית לפני לחיצה
-      await page.waitForTimeout(2000);
-      
-      console.log("Clicking inside the Turnstile widget...");
-      // לוחצים במרכז המסגרת (איפה שהריבוע של ה-V נמצא)
-      await widgetBody.click({ delay: 150, force: true });
-      console.log("Clicked! Waiting for Cloudflare to verify...");
+      if (box) {
+        // box.x זה הקצה השמאלי של הקופסה. נוסיף 30 פיקסלים ימינה (שם נמצאת קוביית הסימון)
+        // box.y זה הקצה העליון. נוסיף חצי מהגובה כדי ללחוץ בדיוק באמצע
+        const clickX = box.x + 30;
+        const clickY = box.y + (box.height / 2);
+        
+        console.log(`Clicking exactly at X:${clickX}, Y:${clickY}`);
+        
+        // מזיזים את העכבר ולוחצים
+        await page.mouse.move(clickX, clickY, { steps: 5 }); // תנועה אנושית
+        await page.mouse.click(clickX, clickY, { delay: 150 });
+        
+        console.log("Mouse click executed! Waiting for Cloudflare to verify...");
+      } else {
+        console.log("Could not find the coordinates of the container.");
+      }
 
     } catch (e) {
-      console.log("CAPTCHA didn't load properly, or wasn't needed. Error info:", e.message);
+      console.log("CAPTCHA error:", e.message);
     }
     // ------------------------------------------------
 
     console.log("Waiting for the download to start (up to 80 seconds)...");
-    
-    // ממתינים שההורדה תתחיל בפועל
     const download = await downloadPromise;
 
     console.log("Download event triggered!");

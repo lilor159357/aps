@@ -1,0 +1,30 @@
+name: Download APK from APKCube
+
+on:
+  workflow_dispatch: # מאפשר לך להפעיל את הסקריפט ידנית בלחיצת כפתור
+
+jobs:
+  download-job:
+    runs-on: ubuntu-latest # השרת של גיטהאב (לינוקס)
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+
+    - name: Install dependencies
+      run: |
+        npm install playwright playwright-extra puppeteer-extra-plugin-stealth
+
+    - name: Run Downloader Script
+      run: node scraper.js # כאן השרת מריץ את הקוד שלך
+
+    - name: Upload APK as Artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: Whatsapp-APK
+        path: ./*.apk # מעלה את הקובץ שירד כדי שתוכל להוריד אותו מהאתר של גיטהאב

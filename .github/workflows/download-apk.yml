@@ -18,7 +18,9 @@ jobs:
 
     - name: Install dependencies
       run: |
+        npm init -y
         npm install playwright playwright-extra puppeteer-extra-plugin-stealth
+        npx playwright install chromium
 
     - name: Run Downloader Script
       run: node scraper.js # כאן השרת מריץ את הקוד שלך

@@ -9,12 +9,12 @@ jobs:
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4 # שונה מ-v3 ל-v4
+      uses: actions/checkout@v4
 
     - name: Setup Node.js
-      uses: actions/setup-node@v4 # שונה מ-v3 ל-v4
+      uses: actions/setup-node@v4
       with:
-        node-version: '20' # עדכנתי לגרסת נוד עדכנית יותר
+        node-version: '20'
 
     - name: Install dependencies
       run: |
@@ -25,8 +25,11 @@ jobs:
     - name: Run Downloader Script
       run: node scraper.js 
 
-    - name: Upload APK as Artifact
-      uses: actions/upload-artifact@v4 # שונה מ-v3 ל-v4 שזה מה שגרם לשגיאה
+    - name: Upload Debug Artifacts
+      if: always() # חשוב מאוד! גורם לשלב הזה לרוץ גם אם הסקריפט נכשל
+      uses: actions/upload-artifact@v4
       with:
-        name: Downloaded-APK
-        path: ./*.apk
+        name: Result-Files
+        path: |
+          *.apk
+          *.png
